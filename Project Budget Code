@@ -1,0 +1,42 @@
+-- SQL Query to calculate the top 5 projects exceeding their budget
+WITH BudgetAnalysis AS (
+    SELECT 
+        p.project_id,
+        p.project_name,
+        b.planned_cost,
+        b.budget,
+        c.actual_cost,
+        -- Calculate percent over budget
+        CASE 
+            WHEN b.budget = 0 THEN NULL
+            ELSE ((c.actual_cost - b.budget) / b.budget) * 100
+        END AS percent_over_budget,
+        -- Calculate total exceeding budget
+        CASE 
+            WHEN c.actual_cost > b.budget THEN c.actual_cost - b.budget
+            ELSE 0
+        END AS total_exceeding_budget
+    FROM 
+        Projects p
+    JOIN 
+        Costs c ON p.project_id = c.project_id
+    JOIN 
+        Budgets b ON p.project_id = b.project_id
+)
+-- Rank projects by total exceeding budget
+SELECT 
+    project_id,
+    project_name,
+    planned_cost,
+    budget,
+    actual_cost,
+    percent_over_budget,
+    total_exceeding_budget,
+    RANK() OVER (ORDER BY total_exceeding_budget DESC) AS rank
+FROM 
+    BudgetAnalysis
+WHERE 
+    total_exceeding_budget > 0 -- Only consider projects exceeding budget
+ORDER BY 
+    rank
+LIMIT 5;
